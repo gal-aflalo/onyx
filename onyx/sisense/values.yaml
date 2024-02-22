@@ -230,7 +230,7 @@ grafana:
   ## @param persistence Persistence settings for Grafana
   persistence:
   ## @param storageClassName on cluster installation (e.g., rwo_sc_name, manual, standard, default, gp2, ebs-sc, aws-efs, nfs-client)
-  # storageClassName: 
+  storageClassName: gp2
   ## @param selectorLabels Selector labels for Grafana (uncomment for single or rook-ceph installation)
   # selectorLabels:
     ## should be "grafana-{{namespace_name}}"
