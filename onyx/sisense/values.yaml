@@ -228,7 +228,7 @@ grafana:
   ## @param adminPassword Admin password for Grafana (should be "passwd-{{namespace_name}}")
   adminPassword: "passwd-sisense"
   ## @param persistence Persistence settings for Grafana
-  persistence:
+  # persistence:
   ## @param storageClassName on cluster installation (e.g., rwo_sc_name, manual, standard, default, gp2, ebs-sc, aws-efs, nfs-client)
   storageClassName: gp2
   ## @param selectorLabels Selector labels for Grafana (uncomment for single or rook-ceph installation)
