@@ -154,7 +154,7 @@ config:
   database: /db/database.db
   root: /rootdir
 
-  resources_small:
+resources_small:
   limits:
     cpu: 1000m
     memory: 450Mi
