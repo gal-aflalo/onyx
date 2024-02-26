@@ -209,3 +209,21 @@ spec:
             path: /opt/sisense/storage
             type: DirectoryOrCreate
       {{- end }}
+        - name: db
+          {{- if .Values.db.pvc.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ .Values.db.pvc.existingClaim | default (printf "%s-%s" (include "filebrowser.fullname" .) "db" ) }}
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+        - name: rootdir
+          {{- if eq .Values.rootDir.type "pvc" }}
+          persistentVolumeClaim:
+            claimName: {{ .Values.rootDir.pvc.existingClaim | default (printf "%s-%s" (include "filebrowser.fullname" .) "rootdir" ) }}
+            readOnly: {{ .Values.rootDir.readOnly }}
+          {{- else if eq .Values.rootDir.type "hostPath" }}
+          hostPath:
+            path: {{ .Values.rootDir.hostPath.path }}
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
