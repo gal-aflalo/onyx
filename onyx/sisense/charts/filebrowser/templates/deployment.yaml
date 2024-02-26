@@ -31,7 +31,7 @@ spec:
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
       initContainers:
-        - name: create-folders-tree
+      - name: create-folders-tree
         image: "{{ .Values.global.imageRegistry }}/utilsbox:stable"
         env:
     {{- if .Values.global.securityContext }}
@@ -122,19 +122,6 @@ spec:
         volumeMounts:
         - mountPath: /opt/sisense/storage
           name: storage
-          env:
-          - name: UID
-            value: "1000"
-          - name: GID
-            value: "1000"
-          image: quay.io/sisense/utilsbox:stable
-          imagePullPolicy: IfNotPresent
-          name: create-folders-tree
-          terminationMessagePath: /dev/termination-log
-          terminationMessagePolicy: File
-          volumeMounts:
-          - mountPath: /opt/sisense/storage
-            name: storage
       containers:
         - name: {{ .Chart.Name }}
           securityContext:
