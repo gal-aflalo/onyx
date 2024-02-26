@@ -97,11 +97,11 @@ affinity: {}
 
 rootDir:
   # -- type of rootDir mount. Valid values are [pvc, hostPath, emptyDir]
-  type: pvc
+  type: hostPath
   # -- Mount the root directory in read-only mode
   readOnly: false
   hostPath:
-    path: /path/on/host
+    path: /opt/sisense/storage
   pvc:
     # -- Existing claim for the root directory
     existingClaim: "storage"
