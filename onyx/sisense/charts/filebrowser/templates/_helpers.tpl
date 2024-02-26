@@ -60,3 +60,35 @@ Create the name of the service account to use
 {{- default "default" .Values.serviceAccount.name }}
 {{- end }}
 {{- end }}
+
+
+{{/*
+Helper function to determine CPU limit based on conditions
+*/}}
+{{- define "filebrowser.limits.cpu" -}}
+{{- if (.Values.resources.limits).cpu -}}
+{{- .Values.resources.limits.cpu -}}
+{{- else if eq "small" (.Values.global.deploymentSize | lower | default "small") -}}
+{{- .Values.resources_small.limits.cpu -}}
+{{- else if eq "large" (.Values.global.deploymentSize | lower) -}}
+{{- .Values.resources_large.limits.cpu -}}
+{{- else -}}
+{{- .Values.resources_small.limits.cpu -}}
+{{- end -}}
+{{- end -}}
+
+
+{{/*
+Helper function to determine Memory limit based on conditions
+*/}}
+{{- define "filebrowser.limits.memory" -}}
+{{- if (.Values.resources.limits).memory -}}
+{{- .Values.resources.limits.memory -}}
+{{- else if eq "small" (.Values.global.deploymentSize | lower | default "small") -}}
+{{- .Values.resources_small.limits.memory -}}
+{{- else if eq "large" (.Values.global.deploymentSize | lower) -}}
+{{- .Values.resources_large.limits.memory -}}
+{{- else -}}
+{{- .Values.resources_small.limits.memory -}}
+{{- end -}}
+{{- end -}}
