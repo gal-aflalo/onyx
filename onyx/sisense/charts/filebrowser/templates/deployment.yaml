@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "filebrowser.fullname" . }}
+  name: {{ template "filebrowser.name" . }}
   labels:
     {{- include "filebrowser.labels" . | nindent 4 }}
 spec:
@@ -12,7 +12,7 @@ spec:
   {{- end }}
   selector:
     matchLabels:
-      {{- include "filebrowser.selectorLabels" . | nindent 6 }}
+      app: {{ template "filebrowser.name" . }}
   template:
     metadata:
       annotations:
@@ -35,7 +35,7 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       containers:
-        - name: {{ .Chart.Name }}
+        - name: {{ template "filebrowser.name" . }}
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
