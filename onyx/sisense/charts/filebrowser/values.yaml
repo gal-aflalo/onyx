@@ -49,7 +49,7 @@ service:
   # -- Kubernetes Service type
   type: ClusterIP
   # -- Kubernetes Service port
-  port: 80
+  port: 8989
 
 ingress:
   # -- Enable the use of the ingress controller to access the web UI
@@ -97,7 +97,7 @@ affinity: {}
 
 rootDir:
   # -- type of rootDir mount. Valid values are [pvc, hostPath, emptyDir]
-  type: hostPath
+  type: pvc
   # -- Mount the root directory in read-only mode
   readOnly: false
   hostPath:
