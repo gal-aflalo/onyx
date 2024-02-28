@@ -12,7 +12,7 @@ spec:
   {{- end }}
   selector:
     matchLabels:
-      app: {{ template "filebrowser.name" . }}
+      {{- include "filebrowser.selectorLabels" . | nindent 6 }}
   template:
     metadata:
       annotations:
