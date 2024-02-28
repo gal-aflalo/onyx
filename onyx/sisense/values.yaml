@@ -337,10 +337,10 @@ management:
   monetdb_image_tag: "onyx.413"
   monetdb_v2_image_tag: "onyx.310"
   utils_image_tag: "onyx.374"
-  build_connectors_image_tag: "onyx.438"
+  build_connectors_image_tag: "onyx.467"
   custom_code_image_tag: "onyx.310"
   image:
-    tag: "onyx.438"
+    tag: "onyx.467"
 
 query:
   monetdb_image_tag: "onyx.413"
