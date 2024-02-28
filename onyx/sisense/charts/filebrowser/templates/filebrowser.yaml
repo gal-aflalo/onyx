@@ -2,34 +2,123 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ template "filebrowser.name" . }}
-  labels:
-    {{- include "filebrowser.labels" . | nindent 4 }}
+  labels: {{- include "filebrowser.labels" . | nindent 4 }}
 spec:
-  replicas: {{ .Values.replicaCount }}
-  {{- with .Values.strategy }}
-  strategy:
-    {{- toYaml . | nindent 4 }}
-  {{- end }}
   selector:
     matchLabels:
-      {{- include "filebrowser.selectorLabels" . | nindent 6 }}
+      app: {{ template "filebrowser.name" . }}
+  replicas: {{ .Values.replicaCount}}
+  {{- if .Values.updateStrategy }}
+  strategy: {{- toYaml .Values.updateStrategy | nindent 4 }}
+  {{- else if eq .Values.global.imageRegistry "docker.artifactory.sisense.com"}}
+  strategy:
+    type: Recreate
+    rollingUpdate: null
+  {{- end }}
   template:
     metadata:
-      annotations:
-        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
-      {{- with .Values.podAnnotations }}
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
-      labels:
-        {{- include "filebrowser.selectorLabels" . | nindent 8 }}
+      labels: {{- include "filebrowser.labels" . | nindent 8 }}
     spec:
-      {{- with .Values.imagePullSecrets }}
-      imagePullSecrets:
-        {{- toYaml . | nindent 8 }}
+      {{- if .Values.global.securityContext }}
+      securityContext:
+        runAsGroup: {{ .Values.global.securityContext.runAsGroup }}
+        runAsUser: {{ .Values.global.securityContext.runAsUser }}
+      {{- if (not .Values.global.isOpenshift | default false) }}
+        seLinuxOptions:
+          level: {{ .Values.global.securityContext.seLinuxOptions.level }}
+      {{- end }}
+      {{- else if .Values.securityContext }}
+      securityContext:
+        {{- toYaml .Values.securityContext | nindent 8 }}
       {{- end }}
       serviceAccountName: {{ include "filebrowser.serviceAccountName" . }}
-      securityContext:
-        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- if .Values.topologySpreadConstraints }}
+      topologySpreadConstraints: {{ toYaml .Values.topologySpreadConstraints | nindent 8 }}
+      {{- end }}
+      {{- if .Values.affinity }}
+      affinity: {{- toYaml .Values.affinity | nindent 8 }}
+      {{- else if .Values.global.clusterMode.enabled }}
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: "node-{{ .Release.Name }}-Application"
+                operator: In
+                values:
+                - "true"
+      {{- end }}
+      containers:
+      - env:
+    {{- if .Values.global.securityContext }}
+    {{- if ne (.Values.global.securityContext.runAsUser | toString) "1000" }}
+        - name: HOME
+          value: "/tmp"
+    {{- end }}   
+        - name: UID
+          value: {{ .Values.global.securityContext.runAsUser | quote }}
+        - name: GID
+          value: {{ .Values.global.securityContext.runAsGroup  | quote }}        
+    {{- else if .Values.securityContext.runAsUser }}
+    {{- if ne (.Values.securityContext.runAsUser| toString) "1000" }} 
+        - name: HOME
+          value: "/tmp"
+    {{- end }}         
+        - name: UID
+          value: {{ .Values.securityContext.runAsUser | quote }}
+        - name: GID
+          value: {{ .Values.securityContext.runAsGroup  | quote }}     
+    {{- end }}    
+        - name: SERVICE_VERSION
+          value: "{{ .Values.global.sisense_version }}"
+        image: "{{ .Values.global.imageRegistry }}/{{ .Chart.Name }}:{{ .Values.image.tag }}"
+        name: {{ template "filebrowser.name" . }}
+        {{- if .Values.global.securityContext }}
+        securityContext:
+          runAsGroup: {{ .Values.global.securityContext.runAsGroup }}
+          runAsUser: {{ .Values.global.securityContext.runAsUser }}
+        {{- if and ( (.Values.global.securityContext.seLinuxOptions).level ) ( not (.Values.global.isOpenshift | default false) ) }}
+          seLinuxOptions:
+            level: {{ .Values.global.securityContext.seLinuxOptions.level }}
+        {{- end }}
+        {{- else if .Values.securityContext }}
+        securityContext:
+        {{- toYaml .Values.securityContext | nindent 8 }}
+        {{- end }}
+        imagePullPolicy: "{{ .Values.image.pullPolicy }}"
+        ports:
+        - containerPort: 8989
+        resources:
+          limits: 
+            cpu: {{ include "filebrowser.limits.cpu" . }}
+            memory: {{ include "filebrowser.limits.memory" . }}
+          requests:
+            cpu: {{ .Values.resources.requests.cpu }}
+            memory: {{ .Values.resources.requests.memory }}
+        volumeMounts:
+        - name: storage
+          mountPath: /files
+      {{- if .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+      {{- range .Values.global.imagePullSecrets }}
+        - name: {{ . }}
+      {{- end }}
+      {{- end }}
+      volumes:
+      - name: 3rdparty-license2
+        configMap:
+          name: 3rdparty-license2
+{{- if .Values.global.clusterMode.enabled }}
+      - name: storage
+        persistentVolumeClaim:
+          claimName: storage
+{{- else }}
+      - name: storage
+        hostPath:
+          path: /opt/sisense/storage
+          type: DirectoryOrCreate
+{{- end }}
+      restartPolicy: Always
       initContainers:
       - name: create-folders-tree
         image: "{{ .Values.global.imageRegistry }}/utilsbox:stable"
@@ -122,69 +211,34 @@ spec:
         volumeMounts:
         - mountPath: /opt/sisense/storage
           name: storage
-      containers:
-        - name: {{ template "filebrowser.name" . }}
-          securityContext:
-            {{- toYaml .Values.securityContext | nindent 12 }}
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
-          imagePullPolicy: {{ .Values.image.pullPolicy }}
-          volumeMounts:
-            - mountPath: /.filebrowser.json
-              name: config
-              subPath: .filebrowser.json
-            - mountPath: /db
-              name: db
-            - mountPath: /rootdir
-              name: rootdir
-              readOnly: {{ .Values.rootDir.readOnly }}
-          ports:
-            - name: http
-              containerPort: {{ .Values.config.port }}
-              protocol: TCP
-          {{- with .Values.livenessProbe }}
-          livenessProbe:
-            {{- toYaml . | nindent 12 }}
-          {{- end }}
-          {{- with .Values.readinessProbe }}
-          readinessProbe:
-            {{- toYaml . | nindent 12 }}
-          {{- end }}
-          resources:
-            {{- toYaml .Values.resources | nindent 12 }}
-      {{- with .Values.nodeSelector }}
-      nodeSelector:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
-      {{- with .Values.affinity }}
-      affinity:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
-      {{- with .Values.tolerations }}
-      tolerations:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
-      volumes:
-        - name: storage
-          persistentVolumeClaim:
-            claimName: storage  
-        - name: config
-          configMap:
-            name: {{ include "filebrowser.fullname" . }}
-        - name: db
-          {{- if .Values.db.pvc.enabled }}
-          persistentVolumeClaim:
-            claimName: {{ .Values.db.pvc.existingClaim | default (printf "%s-%s" (include "filebrowser.fullname" .) "db" ) }}
-          {{- else }}
-          emptyDir: {}
-          {{- end }}
-        - name: rootdir
-          {{- if eq .Values.rootDir.type "pvc" }}
-          persistentVolumeClaim:
-            claimName: {{ .Values.rootDir.pvc.existingClaim | default (printf "%s-%s" (include "filebrowser.fullname" .) "rootdir" ) }}
-            readOnly: {{ .Values.rootDir.readOnly }}
-          {{- else if eq .Values.rootDir.type "hostPath" }}
-          hostPath:
-            path: {{ .Values.rootDir.hostPath.path }}
-          {{- else }}
-          emptyDir: {}
-          {{- end }}
+      - name: create-license
+        image: "{{ .Values.global.imageRegistry }}/utilsbox:stable"
+        command:
+          - "/bin/sh"
+          - "-cx"
+        {{- if .Values.global.securityContext }}
+          - >
+            install -m 0755 -o {{ .Values.global.securityContext.runAsUser }} -g {{ .Values.global.securityContext.runAsGroup }} /license/LICENSE /opt/sisense/storage/licensing/LICENSE
+        {{- else }}
+          - >
+            install -m 0755  -o {{ .Values.securityContext.runAsUser }}  -g {{ .Values.securityContext.runAsGroup }} /license/LICENSE /opt/sisense/storage/licensing/LICENSE
+        {{- end }}    
+        volumeMounts:
+        - mountPath: /opt/sisense/storage
+          name: storage
+        - mountPath: /license
+          name: 3rdparty-license2
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ template "filebrowser.name" . }}
+  labels: {{- include "filebrowser.labels" . | nindent 4 }}
+spec:
+ selector:
+  app: {{ template "filebrowser.name" . }}
+ ports:
+  - name: {{ template "filebrowser.name" . }}
+    port: 8989
+    targetPort: 8989
+ type: ClusterIP

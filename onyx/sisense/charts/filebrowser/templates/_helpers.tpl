@@ -1,9 +1,10 @@
+{{/* vim: set filetype=mustache: */}}
 {{/*
 Expand the name of the chart.
 */}}
 {{- define "filebrowser.name" -}}
-{{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" }}
-{{- end }}
+{{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
 
 {{/*
 Create a default fully qualified app name.
@@ -11,44 +12,48 @@ We truncate at 63 chars because some Kubernetes name fields are limited to this 
 If release name contains chart name it will be used as a full name.
 */}}
 {{- define "filebrowser.fullname" -}}
-{{- if .Values.fullnameOverride }}
-{{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" }}
-{{- else }}
-{{- $name := default .Chart.Name .Values.nameOverride }}
-{{- if contains $name .Release.Name }}
-{{- .Release.Name | trunc 63 | trimSuffix "-" }}
-{{- else }}
-{{- printf "%s-%s" .Release.Name $name | trunc 63 | trimSuffix "-" }}
-{{- end }}
-{{- end }}
-{{- end }}
+{{- if .Values.fullnameOverride -}}
+{{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" -}}
+{{- else -}}
+{{- $name := default .Chart.Name .Values.nameOverride -}}
+{{- if contains $name .Release.Name -}}
+{{- .Release.Name | trunc 63 | trimSuffix "-" -}}
+{{- else -}}
+{{- printf "%s-%s" .Release.Name $name | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
 
 {{/*
 Create chart name and version as used by the chart label.
 */}}
 {{- define "filebrowser.chart" -}}
-{{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
-{{- end }}
+{{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
+
+{{/*
+Create Sisense version from chart version
+*/}}
+{{- define "filebrowser.sisense.version" -}}
+{{- $sisenseVersion := split "." .Chart.Version -}}
+{{- printf "%s.%s.%s" $sisenseVersion._0 $sisenseVersion._1 $sisenseVersion._2 | trimSuffix "." -}}
+{{- end -}}
 
 {{/*
 Common labels
 */}}
 {{- define "filebrowser.labels" -}}
-helm.sh/chart: {{ include "filebrowser.chart" . }}
-{{ include "filebrowser.selectorLabels" . }}
-{{- if .Chart.AppVersion }}
-app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
-{{- end }}
+release: {{ .Release.Name }}
+app: {{ template "filebrowser.name" . }}
+chart: {{ template "filebrowser.chart" . }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
-{{- end }}
-
-{{/*
-Selector labels
-*/}}
-{{- define "filebrowser.selectorLabels" -}}
-app.kubernetes.io/name: {{ include "filebrowser.name" . }}
-app.kubernetes.io/instance: {{ .Release.Name }}
-{{- end }}
+sisense-version: {{ include "filebrowser.sisense.version" . }}
+{{- if .Values.labels -}}
+{{- range $key,$value := .Values.labels }}
+{{ $key }}: {{ $value }}
+{{- end -}}
+{{- end -}}
+{{- end -}}
 
 {{/*
 Create the name of the service account to use
@@ -60,7 +65,6 @@ Create the name of the service account to use
 {{- default "default" .Values.serviceAccount.name }}
 {{- end }}
 {{- end }}
-
 
 {{/*
 Helper function to determine CPU limit based on conditions
