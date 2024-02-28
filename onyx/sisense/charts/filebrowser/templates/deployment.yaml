@@ -164,6 +164,9 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       volumes:
+        - name: storage
+          persistentVolumeClaim:
+            claimName: storage  
         - name: config
           configMap:
             name: {{ include "filebrowser.fullname" . }}
